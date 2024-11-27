@@ -29,7 +29,7 @@ variable "resource_group" {
   }
 
 
-#Create resource group
+#Create a Three resource groups
 resource "azurerm_resource_group" "rg" {
   for_each = var.resource_group
   name =each.value.resource_group_name
