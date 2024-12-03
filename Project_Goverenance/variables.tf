@@ -22,3 +22,4 @@ variable "subscription_id" {
     description = "enter subscription ID for provisioning resources in Azure"
 }
 
+
