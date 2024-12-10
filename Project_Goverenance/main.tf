@@ -1,49 +1,72 @@
 
-#create a 3-resourcegroup, 3-storage, 3-container, 3-blob 
+# Configure the Microsoft Azure Provider
 
-variable "resource_group" {
-  type = map(object({
-    resource_group_name=string
-    location = string
-    
+
+data "azurerm_billing_mca_account_scope" "billing" {
+  billing_account_name = var.billing_account_name
+  billing_profile_name = var.billing_profile_name
+  invoice_section_name = var.invoice_section_name
+  
+}
+#create a subscription
+resource "azurerm_subscription" "nonprd_hub" {
+  subscription_name = "nonprd-hub"
+  billing_scope_id  = data.azurerm_billing_mca_account_scope.billing.id
+depends_on = [ data.azurerm_billing_mca_account_scope.billing ]
+}
+
+#role assignement as owner to create resources
+data "azurerm_subscription" "nonprd_hub" {}
+
+resource "azurerm_role_assignment" "shuaib" {
+  scope                = data.azurerm_subscription.nonprd_hub.id
+  role_definition_name = "owner"
+  principal_id         = "96a47f39-999f-41a6-9723-1d04066fafb5"
+
+}
+
+# Create a Resource Group
+resource "azurerm_resource_group" "Paid" {
+  name     = "PAYG"
+  location = "West Europe"
+  depends_on = [ azurerm_subscription.nonprd_hub ]
+}
+
+resource "azurerm_log_analytics_workspace" "Paid-Workspace" {
+  name                = "PAYG-workspace"
+  location            = azurerm_resource_group.Paid.location
+  resource_group_name = azurerm_resource_group.Paid.name
+  sku                 = "PerGB2018"
+  retention_in_days   = 30
+  depends_on = [ data.azurerm_subscription.nonprd_hub ]
+}
+data "azurerm_subscription" "Pay-As-You-Go" {
+}
+
+resource "azurerm_monitor_diagnostic_setting" "PAYG-diagnostic" {
+  name               = "AllLogs_PayAsYouGo"
+  target_resource_id = data.azurerm_subscription.Pay-As-You-Go.id
+  log_analytics_workspace_id = azurerm_log_analytics_workspace.Paid-Workspace.id
+  log_analytics_destination_type = "AzureDiagnostics"
+  
+log {
+    category = "Administrative"
+    enabled  = true
   }
-  )
-  )
 
-  default = {
-    "rg1"={
-      resource_group_name="rg-shuaib1"
-      location ="east us"
-    },
-      
-    "rg2"={
-      resource_group_name="rg-shuaib2"
-      location ="west us"
-    },
-
-    "rg3"={
-      resource_group_name="rg-shuaib3"
-      location ="west europe"
-    }
-    }
+  metric {
+    category = "AllMetrics"
+    enabled  = true
   }
-
-#Create a new subscription
-
-data "azurerm_billing_enrollment_account_scope" "Account-Shuaib" {
-  billing_account_name    = "b5b0fc26-4c03-5e09-7185-11ef09f994d7:5ab32e97-4e83-4db0-8d54-81fe2b0154a3_2019-05-31"
-  enrollment_account_name = "SUCH-VR35-BG7-PGB"
 }
+ 
 
-resource "azurerm_subscription" "Subscription-Shuaib" {
-  subscription_name = "Zalando-Shuaib"
-  billing_scope_id  = data.azurerm_billing_enrollment_account_scope.Account-Shuaib.id
-}
+# resource "azurerm_subscription" "nonprd_spk" {
+#   subscription_name = "nonprd-spoke"
+#   billing_scope_id  = data.azurerm_billing_mca_account_scope.billing.id
+# }
 
-#Create a Three resource groups
-resource "azurerm_resource_group" "rg" {
-  for_each = var.resource_group
-  name =each.value.resource_group_name
-  location = each.value.location
-  depends_on = [ azurerm_subscription.Subscription-Shuaib ]
-}
+# resource "azurerm_subscription" "prd_spk" {
+#   subscription_name = "prd-spoke"
+#   billing_scope_id  = data.azurerm_billing_mca_account_scope.billing.id
+# }
