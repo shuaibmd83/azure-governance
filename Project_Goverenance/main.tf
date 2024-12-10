@@ -40,12 +40,10 @@ resource "azurerm_log_analytics_workspace" "Paid-Workspace" {
   retention_in_days   = 30
   depends_on = [ data.azurerm_subscription.nonprd_hub ]
 }
-data "azurerm_subscription" "Pay-As-You-Go" {
-}
 
 resource "azurerm_monitor_diagnostic_setting" "PAYG-diagnostic" {
   name               = "AllLogs_PayAsYouGo"
-  target_resource_id = data.azurerm_subscription.Pay-As-You-Go.id
+  target_resource_id = data.azurerm_subscription.nonprd_hub.id
   log_analytics_workspace_id = azurerm_log_analytics_workspace.Paid-Workspace.id
   log_analytics_destination_type = "AzureDiagnostics"
   
@@ -60,13 +58,3 @@ log {
   }
 }
  
-
-# resource "azurerm_subscription" "nonprd_spk" {
-#   subscription_name = "nonprd-spoke"
-#   billing_scope_id  = data.azurerm_billing_mca_account_scope.billing.id
-# }
-
-# resource "azurerm_subscription" "prd_spk" {
-#   subscription_name = "prd-spoke"
-#   billing_scope_id  = data.azurerm_billing_mca_account_scope.billing.id
-# }
